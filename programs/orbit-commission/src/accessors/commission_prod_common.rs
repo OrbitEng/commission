@@ -20,11 +20,11 @@ pub struct ListDigitalProductCommission<'info>{
     #[account(
         mut,
         seeds = [
-            b"recent_commission_catalog"
+            b"recent_catalog"
         ],
         bump
     )]
-    pub recent_commission_catalog: Box<Account<'info, OrbitModCatalogStruct>>,
+    pub recent_catalog: Box<Account<'info, OrbitModCatalogStruct>>,
 
     #[account(
         seeds = [
