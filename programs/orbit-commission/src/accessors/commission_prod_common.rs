@@ -10,7 +10,7 @@ use orbit_catalog::{
     }, program::OrbitCatalog
 };
 use market_accounts::OrbitMarketAccount;
-use product::{product_struct::OrbitProduct, product_trait::OrbitProductTrait};
+use product::{product_struct::OrbitProduct, product_trait::OrbitProductTrait, CommonProdUtils};
 use crate::{CommissionProduct, CommissionMarketErrors, program::OrbitCommissionMarket};
 
 #[derive(Accounts)]
