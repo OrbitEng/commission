@@ -107,7 +107,7 @@ impl <'a, 'b> OrbitProductTrait<'a, 'b, ListCommissionProduct<'a>, UnlistCommiss
     }
 }
 
-#[derive(Accounts)]
+#[derive(Accounts, CommonProdUtils)]
 pub struct UpdateProductField<'info>{
 
     #[account(mut)]
@@ -133,27 +133,5 @@ pub struct UpdateProductField<'info>{
 
 pub fn change_availability_handler(ctx: Context<UpdateProductField>, available: bool) -> Result<()>{
     ctx.accounts.commission_product.metadata.available = available;
-    Ok(())
-}
-
-/// GENERAL
-
-pub fn update_price_handler(ctx: Context<UpdateProductField>, price: u64) -> Result<()>{
-    ctx.accounts.commission_product.metadata.price = price;
-    Ok(())
-}
-
-pub fn update_currency_handler(ctx: Context<UpdateProductField>, currency: Pubkey) -> Result<()>{
-    ctx.accounts.commission_product.metadata.currency = currency;
-    Ok(())
-}
-
-pub fn update_media_handler(ctx: Context<UpdateProductField>, link: String) -> Result<()>{
-    ctx.accounts.commission_product.metadata.media = link;
-    Ok(())
-}
-
-pub fn update_info_handler(ctx: Context<UpdateProductField>, info: String) -> Result<()>{
-    ctx.accounts.commission_product.metadata.info = info;
     Ok(())
 }

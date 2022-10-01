@@ -765,15 +765,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "market-macros"
-version = "0.1.0"
-source = "git+https://github.com/OrbitEng/market-macros#ba61fb5f4dbcd88e65497b5bfebca003ba4bb409"
-dependencies = [
- "quote",
- "syn",
-]
-
-[[package]]
 name = "memchr"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -885,12 +876,20 @@ dependencies = [
  "anchor-lang",
  "anchor-spl",
  "market-accounts",
- "market-macros",
  "orbit-addresses",
  "orbit-catalog",
  "orbit-multisig",
  "product",
  "transaction",
+]
+
+[[package]]
+name = "orbit-derive-product"
+version = "0.1.0"
+source = "git+https://github.com/OrbitEng/product#6cd25fa9ac66a49d17fc884868564f3573d43a23"
+dependencies = [
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -975,9 +974,10 @@ dependencies = [
 [[package]]
 name = "product"
 version = "0.1.0"
-source = "git+https://github.com/OrbitEng/product#0728eaae59c08fba3d22323b9f2f857ac591b6fa"
+source = "git+https://github.com/OrbitEng/product#6cd25fa9ac66a49d17fc884868564f3573d43a23"
 dependencies = [
  "anchor-lang",
+ "orbit-derive-product",
 ]
 
 [[package]]
@@ -1382,7 +1382,7 @@ dependencies = [
 [[package]]
 name = "transaction"
 version = "0.1.0"
-source = "git+https://github.com/OrbitEng/transaction#b27a848b76eb0c60a314c76a9455afc823b9c608"
+source = "git+https://github.com/OrbitEng/transaction#561f8a330baca9eebaab02a04500760a1f06108b"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
