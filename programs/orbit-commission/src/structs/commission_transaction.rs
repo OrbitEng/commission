@@ -5,7 +5,7 @@ use transaction::transaction_struct::OrbitTransaction;
 pub struct CommissionTransaction{
     pub metadata: OrbitTransaction,
 
-    pub preview_addr: String,
+    pub preview_address: String,
     pub preview_rate: u8,
     pub last_rate_offerer: Pubkey,
 
@@ -15,4 +15,11 @@ pub struct CommissionTransaction{
     pub num_keys: u64, // 8
     pub key_arr: Vec<Pubkey>, // up to 2048
     pub final_decision: BuyerDecisionState, // 1
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq)]
+pub enum BuyerDecisionState{
+    Null,
+    Declined,
+    Accept
 }

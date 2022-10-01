@@ -1,7 +1,37 @@
-use anchor_lang::prelude::*;
-use market_accounts::OrbitMarketAccount;
-use transaction::transaction_struct::TransactionState;
-use crate::{CommissionTransaction, CommissionMarketErrors};
+use anchor_lang::{
+    prelude::*,
+    AccountsClose,
+    solana_program::{
+        program::invoke,
+        system_instruction::transfer
+    }
+};
+use transaction::{
+    transaction_trait::OrbitTransactionTrait,
+    transaction_struct::TransactionState,
+    TransactionReviews,
+    ReviewErrors,
+    transaction_utils::*
+};
+use market_accounts::{
+    market_account::OrbitMarketAccount, program::OrbitMarketAccounts,
+    structs::market_account_trait::OrbitMarketAccountTrait,
+    MarketAccountErrors
+};
+use anchor_spl::token::accessor::amount;
+use crate::{
+    id,
+    CommissionTransaction,
+
+    CommissionMarketErrors,
+    OpenCommissionTransactionSol,
+    OpenCommissionTransactionSpl,
+    CloseCommissionTransactionSol,
+    CloseCommissionTransactionSpl,
+    FundEscrowSol,
+    FundEscrowSpl,
+    BuyerDecisionState, program::OrbitCommissionMarket
+};
 
 ////////////////////////////////////////////////////////////////////
 /// ORBIT BASE TRANSACTION FUNCTIONALITIES
@@ -101,7 +131,7 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g> OrbitTransactionTrait<'a, 'b, 'c, 'd, 'e, 'f, '
     fn close_sol(ctx: Context<'_, '_, '_, 'c, CloseCommissionTransactionSol<'c>>) -> Result<()>{
         match ctx.bumps.get("escrow_account"){
             Some(escrow_bump) => {
-                if (ctx.accounts.commission_transaction.metadata.rate == 95)
+                if (ctx.accounts.commission_transaction.close_rate == 95)
                 && (ctx.accounts.commission_transaction.final_decision == BuyerDecisionState::Accept){
                     let bal = ctx.accounts.escrow_account.lamports();
                     let mut residual_amt = bal * 5/100;
@@ -141,7 +171,7 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g> OrbitTransactionTrait<'a, 'b, 'c, 'd, 'e, 'f, '
                     ctx.accounts.escrow_account.to_account_info(),
                     ctx.accounts.seller_wallet.to_account_info(),
                     &[&[b"orbit_escrow_account", ctx.accounts.commission_transaction.key().as_ref(), &[*escrow_bump]]],
-                    ctx.accounts.commission_transaction.metadata.rate
+                    ctx.accounts.commission_transaction.close_rate
                 ).expect("could not transfer tokens");
                 close_escrow_sol_rate(
                     ctx.accounts.escrow_account.to_account_info(),
@@ -172,7 +202,7 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g> OrbitTransactionTrait<'a, 'b, 'c, 'd, 'e, 'f, '
     fn close_spl(ctx: Context<'_, '_, '_, 'd, CloseCommissionTransactionSpl<'d>>) -> Result<()>{
         match ctx.bumps.get("commission_auth"){
             Some(auth_bump) => {
-                if (ctx.accounts.commission_transaction.metadata.rate == 95)
+                if (ctx.accounts.commission_transaction.close_rate == 95)
                 && (ctx.accounts.commission_transaction.final_decision == BuyerDecisionState::Accept){
                     let bal = amount(&ctx.accounts.escrow_account.to_account_info()).expect("could not deserialize token account");
                     let mut residual_amt = bal * 5/100;
@@ -223,7 +253,7 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g> OrbitTransactionTrait<'a, 'b, 'c, 'd, 'e, 'f, '
                     ctx.accounts.commission_auth.to_account_info(),
                     &[&[b"market_authority", &[*auth_bump]]],
                     ctx.accounts.commission_transaction.metadata.transaction_price,
-                    ctx.accounts.commission_transaction.metadata.rate
+                    ctx.accounts.commission_transaction.close_rate
                 ).expect("could not transfer tokens");
                 close_escrow_spl_rate(
                     ctx.accounts.token_program.to_account_info(),
@@ -274,7 +304,7 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g> OrbitTransactionTrait<'a, 'b, 'c, 'd, 'e, 'f, '
                 anchor_spl::token::Transfer{
                     from: ctx.accounts.buyer_spl_wallet.to_account_info(),
                     to: ctx.accounts.escrow_account.to_account_info(),
-                    authority: ctx.accounts.wallet_owner.to_account_info()
+                    authority: ctx.accounts.buyer_wallet.to_account_info()
                 }
             ),
             ctx.accounts.commission_transaction.metadata.transaction_price
@@ -332,6 +362,7 @@ pub fn confirm_accept_handler(ctx: Context<BuyerConfirmation>) -> Result<()>{
         return err!(CommissionMarketErrors::DidNotConfirmDelivery);
     }
     ctx.accounts.commission_transaction.final_decision = BuyerDecisionState::Accept;
+    ctx.accounts.commission_transaction.close_rate = ctx.accounts.commission_transaction.metadata.rate;
     // we dont set state here because we need to wait for the seller to release the final keys
     Ok(())
 }
@@ -344,6 +375,7 @@ pub fn deny_accept_handler(ctx: Context<BuyerConfirmation>) -> Result<()>{
         ctx.accounts.buyer_account.dispute_discounts += 1;
     }
     ctx.accounts.commission_transaction.metadata.rate = 0;
+    ctx.accounts.commission_transaction.close_rate = 0;
     ctx.accounts.commission_transaction.final_decision = BuyerDecisionState::Declined;
     ctx.accounts.commission_transaction.metadata.transaction_state = TransactionState::BuyerConfirmedProduct;
 
@@ -576,7 +608,7 @@ impl <'a> OrbitMarketAccountTrait<'a, LeaveReview<'a>> for CommissionTransaction
                         &[&[b"market_authority", &[*auth_bump]]],
                         rating
                     );
-                    ctx.accounts.commission_transaction.metadata.seller = true;
+                    ctx.accounts.commission_transaction.metadata.reviews.seller = true;
                 },
                 None => return err!(MarketAccountErrors::CannotCallOrbitAccountsProgram)
             };
@@ -609,7 +641,6 @@ impl <'a> OrbitMarketAccountTrait<'a, LeaveReview<'a>> for CommissionTransaction
 //////////////////////////////////////////////////////////////////////////
 /// COMMISSION SPECIFIC FIELDS
 
-//////////////////////////////////////////////////////////////////////////
 /// COMMIT PREVIEW FROM SELLER
 
 #[derive(Accounts)]
@@ -633,12 +664,11 @@ pub struct CommitPreview<'info>{
     pub seller_wallet: Signer<'info>,
 }
 
-pub fn commit_preview_handler(ctx: Context<CommitPreview>, link: [u8; 64]) -> Result<()>{
+pub fn commit_preview_handler(ctx: Context<CommitPreview>, link: String) -> Result<()>{
     ctx.accounts.commission_transaction.preview_address = link;
     Ok(())
 }
 
-////////////////////////////////////////////////////////////////////////////////////
 /// RATE UPDATE UTILS FOR PREVIEW
 
 #[derive(Accounts)]
