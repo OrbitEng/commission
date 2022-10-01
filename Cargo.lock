@@ -765,6 +765,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "market-macros"
+version = "0.1.0"
+source = "git+https://github.com/OrbitEng/market-macros#ba61fb5f4dbcd88e65497b5bfebca003ba4bb409"
+dependencies = [
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "memchr"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -876,6 +885,7 @@ dependencies = [
  "anchor-lang",
  "anchor-spl",
  "market-accounts",
+ "market-macros",
  "orbit-addresses",
  "orbit-catalog",
  "orbit-multisig",
