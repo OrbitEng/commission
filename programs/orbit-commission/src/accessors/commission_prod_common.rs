@@ -3,39 +3,46 @@ use anchor_lang::{
     AccountsClose
 };
 use orbit_catalog::{
-    structs::OrbitModCatalogStruct,
+    structs::{
+        OrbitModCatalogStruct,
+        OrbitVendorCatalog
+    },
     cpi::{
-        accounts::EditModCatalog,
-        edit_mod_catalog
+        accounts::{
+            EditModCatalog,
+            ModifyVendorCatalog
+        },
+        edit_mod_catalog, list_product, unlist_product
     }, program::OrbitCatalog
 };
-use market_accounts::OrbitMarketAccount;
 use product::{product_struct::OrbitProduct, product_trait::OrbitProductTrait, CommonProdUtils};
 use crate::{CommissionProduct, CommissionMarketErrors, program::OrbitCommissionMarket};
 
 #[derive(Accounts)]
+#[instruction(prod_in: OrbitProduct)]
 pub struct ListCommissionProduct<'info>{
     
     #[account(
         init,
         space = 200,
-        payer = seller_wallet
+        payer = seller_wallet,
+        seeds = [
+            b"commission_product",
+            vendor_catalog.key().as_ref(),
+            &[prod_in.index]
+        ],
+        bump
     )]
     pub commission_product: Box<Account<'info, CommissionProduct>>,
 
     #[account(
-        seeds = [
-            b"orbit_account",
-            seller_wallet.key().as_ref()
-        ],
-        bump,
-        seeds::program = market_accounts::ID
+        address = prod_in.owner_catalog
     )]
-    pub seller_account: Box<Account<'info, OrbitMarketAccount>>,
+    pub vendor_catalog:Box<Account<'info, OrbitVendorCatalog>>,
 
     #[account(
         mut,
-        address = seller_account.wallet
+        address = vendor_catalog.catalog_owner
     )]
     pub seller_wallet: Signer<'info>,
 
@@ -67,25 +74,38 @@ pub struct ListCommissionProduct<'info>{
 pub struct UnlistCommissionProduct<'info>{
 
     #[account(mut)]
-    pub commission_product: Account<'info, CommissionProduct>,
+    pub commission_product: Box<Account<'info, CommissionProduct>>,
 
     #[account(
-        address = commission_product.metadata.seller
+        address = commission_product.metadata.owner_catalog
     )]
-    pub seller_account: Account<'info, OrbitMarketAccount>,
+    pub vendor_catalog:Box<Account<'info, OrbitVendorCatalog>>,
 
     #[account(
         mut,
-        address = seller_account.wallet
+        address = vendor_catalog.catalog_owner
     )]
     pub seller_wallet: Signer<'info>,
+
+    pub catalog_program: Program<'info, OrbitCatalog>,
 }
 
 impl <'a, 'b> OrbitProductTrait<'a, 'b, ListCommissionProduct<'a>, UnlistCommissionProduct<'b>> for CommissionProduct{
     fn list(ctx: Context<ListCommissionProduct>, prod: OrbitProduct)-> Result<()> {
-        if prod.seller != ctx.accounts.seller_account.key() {
+        if prod.owner_catalog != ctx.accounts.vendor_catalog.key() {
             return err!(CommissionMarketErrors::InvalidSellerForListing)
         }
+        list_product(
+            CpiContext::new(
+                ctx.accounts.catalog_program.to_account_info(),
+                ModifyVendorCatalog{
+                    vendor_catalog: ctx.accounts.vendor_catalog.to_account_info(),
+                    wallet: ctx.accounts.seller_wallet.to_account_info()
+                }
+            ), 
+            prod.index.clone()
+        ).expect("could not list product, index is taken");
+
         ctx.accounts.commission_product.metadata = prod;
         match ctx.bumps.get("market_auth"){
             Some(auth_bump) => edit_mod_catalog(
@@ -103,6 +123,16 @@ impl <'a, 'b> OrbitProductTrait<'a, 'b, ListCommissionProduct<'a>, UnlistCommiss
     }
 
     fn unlist(ctx: Context<UnlistCommissionProduct>)-> Result<()> {
+        unlist_product(
+            CpiContext::new(
+                ctx.accounts.catalog_program.to_account_info(),
+                ModifyVendorCatalog{
+                    vendor_catalog: ctx.accounts.vendor_catalog.to_account_info(),
+                    wallet: ctx.accounts.seller_wallet.to_account_info()
+                }
+            ),
+            ctx.accounts.commission_product.metadata.index
+        ).expect("could not update catalog");
         ctx.accounts.commission_product.close(ctx.accounts.seller_wallet.to_account_info())
     }
 }
@@ -111,27 +141,16 @@ impl <'a, 'b> OrbitProductTrait<'a, 'b, ListCommissionProduct<'a>, UnlistCommiss
 pub struct UpdateProductField<'info>{
 
     #[account(mut)]
-    pub commission_product: Account<'info, CommissionProduct>,
+    pub commission_product: Box<Account<'info, CommissionProduct>>,
 
     #[account(
-        address = commission_product.metadata.seller,
-        seeds = [
-            b"orbit_account",
-            wallet.key().as_ref()
-        ],
-        bump,
-        seeds::program = market_accounts::ID
+        address = commission_product.metadata.owner_catalog
     )]
-    pub seller_account: Account<'info, OrbitMarketAccount>,
+    pub vendor_catalog:Box<Account<'info, OrbitVendorCatalog>>,
 
     #[account(
         mut,
-        address = seller_account.wallet
+        address = vendor_catalog.catalog_owner
     )]
-    pub wallet: Signer<'info>
-}
-
-pub fn change_availability_handler(ctx: Context<UpdateProductField>, available: bool) -> Result<()>{
-    ctx.accounts.commission_product.metadata.available = available;
-    Ok(())
+    pub seller_wallet: Signer<'info>,
 }

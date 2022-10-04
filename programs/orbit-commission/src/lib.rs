@@ -119,9 +119,7 @@ pub mod orbit_commission_market {
     }
 
     /// MODIFIERS
-    pub fn change_availability(ctx: Context<UpdateProductField>, available: bool) -> Result<()>{
-        change_availability_handler(ctx, available)
-    }
+    
     pub fn change_price(ctx: Context<UpdateProductField>, price: u64) -> Result<()>{
         update_price_handler(ctx, price)
     }

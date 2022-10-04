@@ -3,6 +3,7 @@ use market_accounts::{
     OrbitMarketAccount,
     program::OrbitMarketAccounts
 };
+use orbit_catalog::OrbitVendorCatalog;
 use orbit_multisig::Multisig;
 use crate::{
     CommissionTransaction,
@@ -28,7 +29,17 @@ pub struct OpenCommissionTransactionSpl<'info>{
     #[account(
         constraint = commission_product.metadata.currency != System::id()
     )]
-    pub commission_product: Account<'info, CommissionProduct>,
+    pub commission_product: Box<Account<'info, CommissionProduct>>,
+
+    #[account(
+        constraint = seller_account.wallet == seller_catalog.catalog_owner
+    )]
+    pub seller_account:Box<Account<'info, OrbitMarketAccount>>,
+
+    #[account(
+        address = commission_product.metadata.owner_catalog
+    )]
+    pub seller_catalog:Box<Account<'info, OrbitVendorCatalog>>,
 
     #[account(
         address = commission_product.metadata.currency
@@ -57,7 +68,7 @@ pub struct OpenCommissionTransactionSpl<'info>{
         bump,
         seeds::program = market_accounts::ID
     )]
-    pub buyer_account: Account<'info, OrbitMarketAccount>,
+    pub buyer_account:Box<Account<'info, OrbitMarketAccount>>,
 
     #[account(
         mut,
@@ -175,7 +186,7 @@ pub struct FundEscrowSpl<'info>{
     #[account(
         address = commission_transaction.metadata.buyer
     )]
-    pub buyer_account: Account<'info, OrbitMarketAccount>,
+    pub buyer_account:Box<Account<'info, OrbitMarketAccount>>,
 
     #[account(
         mut,
