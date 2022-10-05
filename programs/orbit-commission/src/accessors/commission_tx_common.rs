@@ -46,8 +46,8 @@ pub struct CloseTransactionAccount<'info>{
 
     #[account(
         constraint = 
-            (market_account.key() == commission_transaction.metadata.buyer) ||
-            (market_account.key() == commission_transaction.metadata.seller),
+            (market_account.voter_id == commission_transaction.metadata.buyer) ||
+            (market_account.voter_id == commission_transaction.metadata.seller),
 
         seeds = [
             b"orbit_account",
@@ -64,7 +64,7 @@ pub struct CloseTransactionAccount<'info>{
     pub wallet: Signer<'info>,
 
     #[account(
-        address = commission_transaction.metadata.buyer,
+        constraint = buyer_account.voter_id == commission_transaction.metadata.buyer,
         seeds = [
             b"orbit_account",
             buyer_wallet.key().as_ref()
@@ -90,8 +90,8 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g> OrbitTransactionTrait<'a, 'b, 'c, 'd, 'e, 'f, '
         }else{
             ctx.accounts.commission_transaction.metadata.rate = 95
         }
-        ctx.accounts.commission_transaction.metadata.buyer = ctx.accounts.buyer_account.key();
-        ctx.accounts.commission_transaction.metadata.seller = ctx.accounts.seller_account.key();
+        ctx.accounts.commission_transaction.metadata.buyer = ctx.accounts.buyer_account.voter_id;
+        ctx.accounts.commission_transaction.metadata.seller = ctx.accounts.seller_account.voter_id;
         ctx.accounts.commission_transaction.metadata.product = ctx.accounts.commission_product.key();
         ctx.accounts.commission_transaction.metadata.transaction_state = TransactionState::Opened;
         ctx.accounts.commission_transaction.metadata.transaction_price = price;
@@ -119,8 +119,8 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g> OrbitTransactionTrait<'a, 'b, 'c, 'd, 'e, 'f, '
         }else{
             ctx.accounts.commission_transaction.metadata.rate = 95
         }
-        ctx.accounts.commission_transaction.metadata.buyer = ctx.accounts.buyer_account.key();
-        ctx.accounts.commission_transaction.metadata.seller = ctx.accounts.seller_account.key();
+        ctx.accounts.commission_transaction.metadata.buyer = ctx.accounts.buyer_account.voter_id;
+        ctx.accounts.commission_transaction.metadata.seller = ctx.accounts.seller_account.voter_id;
         ctx.accounts.commission_transaction.metadata.product = ctx.accounts.commission_product.key();
         ctx.accounts.commission_transaction.metadata.transaction_state = TransactionState::Opened;
         ctx.accounts.commission_transaction.metadata.transaction_price = price;
@@ -337,7 +337,7 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g> OrbitTransactionTrait<'a, 'b, 'c, 'd, 'e, 'f, '
 pub struct BuyerConfirmation<'info>{
     #[account(
         mut,
-        constraint = commission_transaction.metadata.buyer == buyer_account.key(),
+        constraint = commission_transaction.metadata.buyer == buyer_account.voter_id,
         constraint = commission_transaction.final_decision == BuyerDecisionState::Null,
     )]
     pub commission_transaction: Box<Account<'info, CommissionTransaction>>,
@@ -403,7 +403,7 @@ pub struct EarlyDeclineTransaction<'info>{
     pub commission_transaction: Account<'info, CommissionTransaction>,
 
     #[account(
-        address = commission_transaction.metadata.buyer,
+        constraint = buyer.voter_id == commission_transaction.metadata.buyer,
         seeds = [
             b"orbit_account",
             wallet.key().as_ref()
@@ -437,7 +437,7 @@ pub struct SellerAcceptTransaction<'info>{
     pub commission_transaction: Box<Account<'info, CommissionTransaction>>,
 
     #[account(
-        address = commission_transaction.metadata.seller,
+        constraint = seller_account.voter_id == commission_transaction.metadata.seller,
         seeds = [
             b"orbit_account",
             wallet.key().as_ref()
@@ -467,7 +467,7 @@ pub struct CommitInitData<'info>{
     pub commission_transaction: Box<Account<'info, CommissionTransaction>>,
 
     #[account(
-        address = commission_transaction.metadata.seller,
+        constraint = seller_account.voter_id == commission_transaction.metadata.seller,
         seeds = [
             b"orbit_account",
             wallet.key().as_ref()
@@ -512,7 +512,7 @@ pub struct CommitSubKeys<'info>{
     pub commission_transaction: Box<Account<'info, CommissionTransaction>>,
 
     #[account(
-        address = commission_transaction.metadata.seller,
+        constraint = seller_account.voter_id == commission_transaction.metadata.seller,
         seeds = [
             b"orbit_account",
             wallet.key().as_ref()
@@ -565,15 +565,15 @@ pub struct LeaveReview<'info>{
     #[account(
         mut,
         constraint = 
-        (reviewer.key() == commission_transaction.metadata.seller) ||
-        (reviewer.key() == commission_transaction.metadata.buyer)
+        (reviewer.voter_id == commission_transaction.metadata.seller) ||
+        (reviewer.voter_id == commission_transaction.metadata.buyer)
     )]
     pub reviewed_account:Box<Account<'info, OrbitMarketAccount>>,
 
     #[account(
         constraint = 
-        (reviewer.key() == commission_transaction.metadata.seller) ||
-        (reviewer.key() == commission_transaction.metadata.buyer),
+        (reviewer.voter_id == commission_transaction.metadata.seller) ||
+        (reviewer.voter_id == commission_transaction.metadata.buyer),
         seeds = [
             b"orbit_account",
             wallet.key().as_ref()
@@ -608,7 +608,7 @@ impl <'a> OrbitMarketAccountTrait<'a, LeaveReview<'a>> for CommissionTransaction
             return err!(ReviewErrors::RatingOutsideRange)
         };
 
-        if ctx.accounts.commission_transaction.metadata.seller == ctx.accounts.reviewer.key() && !ctx.accounts.commission_transaction.metadata.reviews.seller{
+        if ctx.accounts.commission_transaction.metadata.seller == ctx.accounts.reviewer.voter_id && !ctx.accounts.commission_transaction.metadata.reviews.seller{
             match ctx.bumps.get("commission_auth"){
                 Some(auth_bump) => {
                     submit_rating_with_signer(
@@ -624,7 +624,7 @@ impl <'a> OrbitMarketAccountTrait<'a, LeaveReview<'a>> for CommissionTransaction
                 None => return err!(MarketAccountErrors::CannotCallOrbitAccountsProgram)
             };
         }else
-        if ctx.accounts.commission_transaction.metadata.buyer == ctx.accounts.reviewer.key()  && !ctx.accounts.commission_transaction.metadata.reviews.buyer{
+        if ctx.accounts.commission_transaction.metadata.buyer == ctx.accounts.reviewer.voter_id  && !ctx.accounts.commission_transaction.metadata.reviews.buyer{
             match ctx.bumps.get("commission_auth"){
                 Some(auth_bump) => {
                     submit_rating_with_signer(
@@ -662,7 +662,7 @@ pub struct CommitPreview<'info>{
     pub commission_transaction: Box<Account<'info, CommissionTransaction>>,
 
     #[account(
-        address = commission_transaction.metadata.seller,
+        constraint = seller_account.voter_id == commission_transaction.metadata.seller,
         seeds = [
             b"orbit_account",
             seller_wallet.key().as_ref()
@@ -691,7 +691,7 @@ pub struct UpdateRate<'info>{
     pub commission_transaction: Box<Account<'info, CommissionTransaction>>,
 
     #[account(
-        constraint = (market_account.key() == commission_transaction.metadata.seller) || (market_account.key() == commission_transaction.metadata.buyer),
+        constraint = (market_account.voter_id == commission_transaction.metadata.seller) || (market_account.voter_id == commission_transaction.metadata.buyer),
         seeds = [
             b"orbit_account",
             wallet.key().as_ref()
@@ -706,12 +706,12 @@ pub struct UpdateRate<'info>{
 
 pub fn propose_rate_handler(ctx: Context<UpdateRate>, new_rate: u8) -> Result<()>{
     ctx.accounts.commission_transaction.preview_rate = new_rate;
-    ctx.accounts.commission_transaction.last_rate_offerer = ctx.accounts.market_account.key();
+    ctx.accounts.commission_transaction.last_rate_offerer = ctx.accounts.market_account.voter_id;
     Ok(())
 }
 
 pub fn accept_rate_handler(ctx: Context<UpdateRate>) -> Result<()>{
-    if ctx.accounts.market_account.key() == ctx.accounts.commission_transaction.last_rate_offerer{
+    if ctx.accounts.market_account.voter_id == ctx.accounts.commission_transaction.last_rate_offerer{
         return err!(CommissionMarketErrors::InvalidRateAcceptor)
     };
     ctx.accounts.commission_transaction.last_rate_offerer = ctx.accounts.commission_transaction.metadata.seller;

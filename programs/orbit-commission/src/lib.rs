@@ -9,6 +9,9 @@ pub use accessors::*;
 pub use structs::*;
 pub use errors::*;
 
+// use crate::product::*;
+// use crate::transactions::*;
+
 declare_id!("tS2LAkFMR7PVseGP4uLeSH49Htpv6JmYVFthBgviiFp");
 
 #[program]
