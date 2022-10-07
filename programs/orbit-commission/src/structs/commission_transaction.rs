@@ -7,7 +7,7 @@ pub struct CommissionTransaction{
 
     pub preview_address: String,
     pub preview_rate: u8,
-    pub last_rate_offerer: u64,
+    pub last_rate_offerer: Pubkey,
 
     pub close_rate: u8,
 

@@ -75,7 +75,7 @@ pub struct CloseCommissionTransactionSol<'info>{
     pub commission_transaction: Box<Account<'info, CommissionTransaction>>,
 
     #[account(
-        constraint = buyer_account.voter_id == commission_transaction.metadata.buyer
+        constraint = buyer_account.key() == commission_transaction.metadata.buyer
     )]
     pub buyer_account:Box<Account<'info, OrbitMarketAccount>>,
 
@@ -86,7 +86,7 @@ pub struct CloseCommissionTransactionSol<'info>{
     pub buyer_wallet: SystemAccount<'info>,
 
     #[account(
-        constraint = seller_account.voter_id == commission_transaction.metadata.seller
+        constraint = seller_account.key() == commission_transaction.metadata.seller
     )]
     pub seller_account:Box<Account<'info, OrbitMarketAccount>>,
 
@@ -145,7 +145,7 @@ pub struct FundEscrowSol<'info>{
     pub commission_transaction: Box<Account<'info, CommissionTransaction>>,
 
     #[account(
-        constraint = buyer_account.voter_id == commission_transaction.metadata.buyer,
+        constraint = buyer_account.key() == commission_transaction.metadata.buyer,
         seeds = [
             b"orbit_account",
             buyer_wallet.key().as_ref()

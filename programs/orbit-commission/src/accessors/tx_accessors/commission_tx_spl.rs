@@ -99,7 +99,7 @@ pub struct CloseCommissionTransactionSpl<'info>{
     pub commission_transaction: Box<Account<'info, CommissionTransaction>>,
 
     #[account(
-        constraint = buyer_account.voter_id == commission_transaction.metadata.buyer
+        constraint = buyer_account.key() == commission_transaction.metadata.buyer
     )]
     pub buyer_account: Box<Account<'info, OrbitMarketAccount>>,
 
@@ -116,7 +116,7 @@ pub struct CloseCommissionTransactionSpl<'info>{
     pub buyer_token_account: Account<'info, TokenAccount>,
 
     #[account(
-        constraint = seller_account.voter_id == commission_transaction.metadata.seller
+        constraint = seller_account.key() == commission_transaction.metadata.seller
     )]
     pub seller_account: Box<Account<'info, OrbitMarketAccount>>,
 
@@ -184,7 +184,7 @@ pub struct FundEscrowSpl<'info>{
     pub commission_transaction: Box<Account<'info, CommissionTransaction>>,
 
     #[account(
-        constraint = buyer_account.voter_id == commission_transaction.metadata.buyer
+        constraint = buyer_account.key() == commission_transaction.metadata.buyer
     )]
     pub buyer_account:Box<Account<'info, OrbitMarketAccount>>,
 
