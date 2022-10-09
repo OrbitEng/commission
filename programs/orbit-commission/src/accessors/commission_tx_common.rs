@@ -6,7 +6,7 @@ use anchor_lang::{
         system_instruction::transfer
     }
 };
-use transaction::{
+use orbit_transaction::{
     transaction_trait::OrbitTransactionTrait,
     transaction_struct::TransactionState,
     TransactionReviews,

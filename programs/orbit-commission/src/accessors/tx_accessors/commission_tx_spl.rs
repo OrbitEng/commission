@@ -7,10 +7,10 @@ use orbit_catalog::OrbitVendorCatalog;
 use orbit_multisig::Multisig;
 use crate::{
     CommissionTransaction,
-    CommissionProduct,
     BuyerDecisionState, program::OrbitCommissionMarket,
 };
-use transaction::transaction_struct::TransactionState;
+use orbit_transaction::transaction_struct::TransactionState;
+use orbit_product::CommissionProduct;
 use anchor_spl::token::{
     TokenAccount,
     Mint,

@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use product::product_struct::OrbitProduct;
+use orbit_product::product_struct::OrbitProduct;
 
 pub mod accessors;
 pub mod structs;
@@ -9,7 +9,7 @@ pub use accessors::*;
 pub use structs::*;
 pub use errors::*;
 
-// use crate::product::*;
+// use crate::orbit_product::*;
 // use crate::transactions::*;
 
 declare_id!("tS2LAkFMR7PVseGP4uLeSH49Htpv6JmYVFthBgviiFp");
@@ -17,9 +17,9 @@ declare_id!("tS2LAkFMR7PVseGP4uLeSH49Htpv6JmYVFthBgviiFp");
 #[program]
 pub mod orbit_commission_market {
     use super::*;
-    use transaction::transaction_trait::OrbitTransactionTrait;
+    use orbit_transaction::transaction_trait::OrbitTransactionTrait;
     use market_accounts::structs::OrbitMarketAccountTrait;
-    use product::product_trait::OrbitProductTrait;
+    use orbit_product::product_trait::OrbitProductTrait;
 
     //////////////////////////
     /// INITIALIZATION
@@ -33,32 +33,32 @@ pub mod orbit_commission_market {
 
     /// SOL
     pub fn open_transaction_sol(ctx: Context<OpenCommissionTransactionSol>, price: u64, use_discount: bool) -> Result<()>{
-        CommissionTransaction::open_sol(ctx, price, use_discount)
+        Commissionorbit_transaction::open_sol(ctx, price, use_discount)
     }
 
     pub fn close_transaction_sol<'a>(ctx: Context<'_, '_, '_, 'a, CloseCommissionTransactionSol<'a>>) -> Result<()>{
-        CommissionTransaction::close_sol(ctx)
+        Commissionorbit_transaction::close_sol(ctx)
     }
 
     pub fn fund_escrow_sol(ctx: Context<FundEscrowSol>) -> Result<()>{
-        CommissionTransaction::fund_escrow_sol(ctx)
+        Commissionorbit_transaction::fund_escrow_sol(ctx)
     }
 
     /// SPL
     pub fn open_transaction_spl(ctx: Context<OpenCommissionTransactionSpl>, price: u64, use_discount: bool) -> Result<()>{
-        CommissionTransaction::open_spl(ctx, price, use_discount)
+        Commissionorbit_transaction::open_spl(ctx, price, use_discount)
     }
 
     pub fn close_transaction_spl<'a>(ctx: Context<'_, '_, '_, 'a, CloseCommissionTransactionSpl<'a>>) -> Result<()>{
-        CommissionTransaction::close_spl(ctx)
+        Commissionorbit_transaction::close_spl(ctx)
     }
 
     pub fn fund_escrow_spl(ctx: Context<FundEscrowSpl>) -> Result<()>{
-        CommissionTransaction::fund_escrow_spl(ctx)
+        Commissionorbit_transaction::fund_escrow_spl(ctx)
     }
 
     pub fn close_transaction_account(ctx: Context<CloseTransactionAccount>) -> Result<()>{
-        CommissionTransaction::close_transaction_account(ctx)
+        Commissionorbit_transaction::close_transaction_account(ctx)
     }
     
     /// BUYER UTILS
@@ -114,33 +114,15 @@ pub mod orbit_commission_market {
     //////////////////////////////
     /// PRODUCT
     
-    pub fn list_product(ctx: Context<ListCommissionProduct>, prod: OrbitProduct)-> Result<()> {
-        CommissionProduct::list(ctx, prod)
-    }
-    pub fn unlist_product(ctx: Context<UnlistCommissionProduct>)-> Result<()>{
-        CommissionProduct::unlist(ctx)
-    }
 
     /// MODIFIERS
     
-    pub fn change_price(ctx: Context<UpdateProductField>, price: u64) -> Result<()>{
-        update_price_handler(ctx, price)
-    }
-    pub fn update_currency(ctx: Context<UpdateProductField>, currency: Pubkey) -> Result<()>{
-        update_currency_handler(ctx, currency)
-    }
-    pub fn set_media(ctx: Context<UpdateProductField>, link: String) -> Result<()>{
-        update_media_handler(ctx, link)
-    }
-    pub fn set_prod_info(ctx: Context<UpdateProductField>, info: String) -> Result<()>{
-        update_info_handler(ctx, info)
-    }
 
     /////////////////////////////////////////////////
     /// REVIEW RELATED
 
     pub fn leave_review(ctx: Context<LeaveReview>, rating: u8) -> Result<()>{
-        CommissionTransaction::leave_review(ctx, rating)
+        Commissionorbit_transaction::leave_review(ctx, rating)
     }
 }
 

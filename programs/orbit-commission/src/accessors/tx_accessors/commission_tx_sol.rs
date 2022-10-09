@@ -5,12 +5,12 @@ use market_accounts::{
 };
 use orbit_catalog::OrbitVendorCatalog;
 use orbit_multisig::Multisig;
+use orbit_product::CommissionProduct;
 use crate::{
     CommissionTransaction,
-    CommissionProduct,
     BuyerDecisionState, program::OrbitCommissionMarket,
 };
-use transaction::transaction_struct::TransactionState;
+use orbit_transaction::transaction_struct::TransactionState;
 
 #[derive(Accounts)]
 pub struct OpenCommissionTransactionSol<'info>{
