@@ -1,9 +1,9 @@
 use anchor_lang::prelude::*;
-use orbit_transaction::transaction_struct::OrbitTransaction;
+use orbit_transaction::transaction_struct::OrbitTransactionStruct;
 
 #[account]
 pub struct CommissionTransaction{
-    pub metadata: OrbitTransaction,
+    pub metadata: OrbitTransactionStruct,
 
     pub preview_address: String,
     pub preview_rate: u8,

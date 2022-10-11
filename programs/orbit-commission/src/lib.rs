@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use orbit_product::product_struct::OrbitProduct;
 
 pub mod accessors;
 pub mod structs;
@@ -12,53 +11,54 @@ pub use errors::*;
 // use crate::orbit_product::*;
 // use crate::transactions::*;
 
-declare_id!("tS2LAkFMR7PVseGP4uLeSH49Htpv6JmYVFthBgviiFp");
+declare_id!("9kTSzk3yQZBn2esehyucammd1WJ65GKcVAVCBGMdbcL5");
 
 #[program]
 pub mod orbit_commission_market {
     use super::*;
     use orbit_transaction::transaction_trait::OrbitTransactionTrait;
     use market_accounts::structs::OrbitMarketAccountTrait;
-    use orbit_product::product_trait::OrbitProductTrait;
-
-    //////////////////////////
-    /// INITIALIZATION
-    
-    pub fn init_commission_recent_catalog(ctx: Context<CreateCommissionRecentCatalog>) -> Result<()>{
-        recent_commission_catalog_handler(ctx)
-    }
 
     //////////////////////////
     /// TRANSACTION
 
     /// SOL
-    pub fn open_transaction_sol(ctx: Context<OpenCommissionTransactionSol>, price: u64, use_discount: bool) -> Result<()>{
-        Commissionorbit_transaction::open_sol(ctx, price, use_discount)
+    pub fn open_transaction_sol(ctx: Context<OpenCommissionTransactionSol>, seller_index: u8, buyer_index: u8, price: u64, use_discount: bool) -> Result<()>{
+        CommissionTransaction::open_sol(ctx, seller_index, buyer_index, price, use_discount)
     }
 
     pub fn close_transaction_sol<'a>(ctx: Context<'_, '_, '_, 'a, CloseCommissionTransactionSol<'a>>) -> Result<()>{
-        Commissionorbit_transaction::close_sol(ctx)
+        CommissionTransaction::close_sol(ctx)
     }
 
     pub fn fund_escrow_sol(ctx: Context<FundEscrowSol>) -> Result<()>{
-        Commissionorbit_transaction::fund_escrow_sol(ctx)
+        CommissionTransaction::fund_escrow_sol(ctx)
+    }
+
+    pub fn seller_early_decline_sol(ctx: Context<SellerEarlyDeclineSol>) -> Result<()>{
+        CommissionTransaction::seller_early_decline_sol(ctx)
     }
 
     /// SPL
-    pub fn open_transaction_spl(ctx: Context<OpenCommissionTransactionSpl>, price: u64, use_discount: bool) -> Result<()>{
-        Commissionorbit_transaction::open_spl(ctx, price, use_discount)
+    pub fn open_transaction_spl(ctx: Context<OpenCommissionTransactionSpl>, seller_index: u8, buyer_index: u8,  price: u64, use_discount: bool) -> Result<()>{
+        CommissionTransaction::open_spl(ctx, seller_index, buyer_index, price, use_discount)
     }
 
     pub fn close_transaction_spl<'a>(ctx: Context<'_, '_, '_, 'a, CloseCommissionTransactionSpl<'a>>) -> Result<()>{
-        Commissionorbit_transaction::close_spl(ctx)
+        CommissionTransaction::close_spl(ctx)
     }
 
     pub fn fund_escrow_spl(ctx: Context<FundEscrowSpl>) -> Result<()>{
-        Commissionorbit_transaction::fund_escrow_spl(ctx)
+        CommissionTransaction::fund_escrow_spl(ctx)
+    }
+    
+    pub fn seller_early_decline_spl(ctx: Context<SellerEarlyDeclineSpl>) -> Result<()>{
+        CommissionTransaction::seller_early_decline_spl(ctx)
     }
 
+    /// COMMON
     pub fn close_transaction_account(ctx: Context<CloseTransactionAccount>) -> Result<()>{
-        Commissionorbit_transaction::close_transaction_account(ctx)
+        CommissionTransaction::close_transaction_account(ctx)
     }
     
     /// BUYER UTILS
@@ -70,12 +70,8 @@ pub mod orbit_commission_market {
         confirm_accept_handler(ctx)
     }
     
-    pub fn deny_accept(ctx: Context<BuyerConfirmation>) -> Result<()>{
+    pub fn deny_accept(ctx: Context<BuyerDeny>) -> Result<()>{
         deny_accept_handler(ctx)
-    }
-
-    pub fn early_decline(ctx: Context<EarlyDeclineTransaction>) -> Result<()>{
-        early_decline_handler(ctx)
     }
 
     /// SELLER UTILS
@@ -122,7 +118,7 @@ pub mod orbit_commission_market {
     /// REVIEW RELATED
 
     pub fn leave_review(ctx: Context<LeaveReview>, rating: u8) -> Result<()>{
-        Commissionorbit_transaction::leave_review(ctx, rating)
+        CommissionTransaction::leave_review(ctx, rating)
     }
 }
 
