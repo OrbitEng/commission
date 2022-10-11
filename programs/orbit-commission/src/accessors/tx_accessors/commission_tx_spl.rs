@@ -251,7 +251,6 @@ pub struct FundEscrowSpl<'info>{
     pub token_program: Program<'info, Token>
 }
 
-
 #[derive(Accounts)]
 pub struct SellerEarlyDeclineSpl<'info>{
     //////////////////////////////////
