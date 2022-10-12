@@ -27,6 +27,7 @@ pub struct OpenCommissionTransactionSpl<'info>{
         payer = buyer_wallet,
         seeds = [
             b"orbit_commission_transaction",
+            seller_transactions_log.key().as_ref(),
             [seller_tx_index].as_ref()
         ],
         bump
@@ -38,8 +39,9 @@ pub struct OpenCommissionTransactionSpl<'info>{
         token::mint = token_mint,
         token::authority = commission_auth,
         seeds = [
-            b"commission_escrow_spl",
+            b"orbit_escrow_account",
             commission_transaction.key().as_ref(),
+            buyer_transactions_log.key().as_ref()
         ],
         bump,
         payer = buyer_wallet
@@ -128,8 +130,9 @@ pub struct CloseCommissionTransactionSpl<'info>{
     #[account(
         mut,
         seeds = [
-            b"commission_escrow_spl",
+            b"orbit_escrow_account",
             commission_transaction.key().as_ref(),
+            buyer_transactions_log.key().as_ref()
         ],
         bump,
 
@@ -216,8 +219,9 @@ pub struct FundEscrowSpl<'info>{
     #[account(
         mut,
         seeds = [
-            b"commission_escrow_spl",
+            b"orbit_escrow_account",
             commission_transaction.key().as_ref(),
+            buyer_transactions_log.key().as_ref()
         ],
         bump,
         address = commission_transaction.metadata.escrow_account
@@ -264,8 +268,9 @@ pub struct SellerEarlyDeclineSpl<'info>{
     #[account(
         mut,
         seeds = [
-            b"commission_escrow_spl",
+            b"orbit_escrow_account",
             commission_transaction.key().as_ref(),
+            buyer_transactions_log.key().as_ref()
         ],
         bump,
         
@@ -321,11 +326,6 @@ pub struct SellerEarlyDeclineSpl<'info>{
         bump
     )]
     pub commission_auth: SystemAccount<'info>,
-    
-    #[account(
-        token::authority = Pubkey::new(orbit_addresses::MULTISIG_SIGNER)
-    )]
-    pub multisig_ata: Account<'info, TokenAccount>,
 
     pub market_account_program: Program<'info, OrbitMarketAccounts>,
     

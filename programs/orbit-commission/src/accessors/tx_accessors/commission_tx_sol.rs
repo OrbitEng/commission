@@ -22,6 +22,7 @@ pub struct OpenCommissionTransactionSol<'info>{
         space = 4000,
         seeds = [
             b"orbit_commission_transaction",
+            seller_transactions_log.key().as_ref(),
             [seller_tx_index].as_ref()
         ],
         bump
@@ -31,7 +32,8 @@ pub struct OpenCommissionTransactionSol<'info>{
     #[account(
         seeds = [
             b"orbit_escrow_account",
-            commission_transaction.key().as_ref()
+            commission_transaction.key().as_ref(),
+            buyer_transactions_log.key().as_ref()
         ],
         bump
     )]
@@ -277,12 +279,6 @@ pub struct SellerEarlyDeclineSol<'info>{
 
     //////////////////////////////////
     /// CPI AND EXTRANEOUS
-    
-    #[account(
-        mut,
-        address = Pubkey::new(orbit_addresses::MULTISIG_SIGNER)
-    )]
-    pub multisig_wallet: SystemAccount<'info>,
 
     #[account(
         seeds = [b"market_authority"],
