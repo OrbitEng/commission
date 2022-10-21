@@ -40,8 +40,7 @@ pub struct OpenCommissionTransactionSol<'info>{
     pub escrow_account: SystemAccount<'info>,
 
     #[account(
-        mut,
-        constraint = commission_product.metadata.currency == System::id()
+        mut
     )] 
     pub commission_product: Box<Account<'info, CommissionProduct>>,
     

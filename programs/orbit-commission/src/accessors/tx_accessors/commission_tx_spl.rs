@@ -50,14 +50,8 @@ pub struct OpenCommissionTransactionSpl<'info>{
 
     //////////////////////////////////
     /// PRODUCT
-    #[account(
-        address = commission_product.metadata.currency
-    )]
     pub token_mint: Account<'info, Mint>,
 
-    #[account(
-        constraint = commission_product.metadata.currency != System::id()
-    )]
     pub commission_product: Box<Account<'info, CommissionProduct>>,
     
     //////////////////////////////////////////////////
