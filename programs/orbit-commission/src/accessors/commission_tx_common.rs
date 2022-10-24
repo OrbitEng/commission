@@ -71,18 +71,25 @@ pub struct CloseTransactionAccount<'info>{
 
 impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, OpenCommissionTransactionSol<'a>, OpenCommissionTransactionSpl<'b>, CloseCommissionTransactionSol<'c>, CloseCommissionTransactionSpl<'d>, FundEscrowSol<'e>, FundEscrowSpl<'f>, CloseTransactionAccount<'g>, SellerEarlyDeclineSol<'h>, SellerEarlyDeclineSpl<'i>> for CommissionTransaction{
     fn open_sol(ctx: Context<OpenCommissionTransactionSol>, seller_index: u8, buyer_index: u8, mut price: u64, use_discount: bool) -> Result<()>{
+        let auth_bump: &u8;
+        if let Some(ab) = ctx.bumps.get("commission_auth"){
+            auth_bump = ab
+        }else{
+            return err!(CommissionMarketErrors::InvalidAuthBump)
+        };
         if use_discount && ctx.accounts.buyer_market_account.dispute_discounts > 0{
             ctx.accounts.commission_transaction.metadata.rate = 100;
             price = price * 95 / 100;
             
             market_accounts::cpi::decrement_dispute_discounts(
-                CpiContext::new(
+                CpiContext::new_with_signer(
                     ctx.accounts.market_account_program.to_account_info(),
                     market_accounts::cpi::accounts::MarketAccountUpdateInternal{
                         market_account: ctx.accounts.buyer_market_account.to_account_info(),
                         caller_auth: ctx.accounts.commission_auth.to_account_info(),
                         caller: ctx.accounts.commission_program.to_account_info()
-                    }
+                    },
+                    &[&[b"market_auth", &[*auth_bump]]]
                 )
             )?;
         }else{
@@ -107,13 +114,14 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, '
         };
 
         orbit_transaction::cpi::add_to_buyer_transactions_log(
-            CpiContext::new(
+            CpiContext::new_with_signer(
                 ctx.accounts.transaction_program.to_account_info(),
                 orbit_transaction::cpi::accounts::AddBuyerTransactions{
                     transactions_log: ctx.accounts.buyer_transactions_log.to_account_info(),
                     tx: ctx.accounts.commission_transaction.to_account_info(),
                     buyer_wallet: ctx.accounts.buyer_wallet.to_account_info()
-                }
+                },
+                &[&[b"market_auth", &[*auth_bump]]]
             ),
             buyer_index
         )?;
@@ -134,18 +142,25 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, '
     }
 
     fn open_spl(ctx: Context<OpenCommissionTransactionSpl>, seller_index: u8, buyer_index: u8, mut price: u64, use_discount: bool) -> Result<()>{
+        let auth_bump: &u8;
+        if let Some(ab) = ctx.bumps.get("commission_auth"){
+            auth_bump = ab
+        }else{
+            return err!(CommissionMarketErrors::InvalidAuthBump)
+        };
         if use_discount && ctx.accounts.buyer_market_account.dispute_discounts > 0{
             ctx.accounts.commission_transaction.metadata.rate = 100;
             price = price * 95 / 100;
             
             market_accounts::cpi::decrement_dispute_discounts(
-                CpiContext::new(
+                CpiContext::new_with_signer(
                     ctx.accounts.market_account_program.to_account_info(),
                     market_accounts::cpi::accounts::MarketAccountUpdateInternal{
                         market_account: ctx.accounts.buyer_market_account.to_account_info(),
                         caller_auth: ctx.accounts.commission_auth.to_account_info(),
                         caller: ctx.accounts.commission_program.to_account_info()
-                    }
+                    },
+                    &[&[b"market_auth", &[*auth_bump]]]
                 )
             )?;
         }else{
@@ -181,14 +196,15 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, '
             buyer_index
         )?;
         orbit_transaction::cpi::add_to_seller_transactions_log(
-            CpiContext::new(
+            CpiContext::new_with_signer(
                 ctx.accounts.transaction_program.to_account_info(),
                 orbit_transaction::cpi::accounts::AddSellerTransactions{
                     transactions_log: ctx.accounts.seller_transactions_log.to_account_info(),
                     tx: ctx.accounts.commission_transaction.to_account_info(),
                     caller_auth: ctx.accounts.commission_auth.to_account_info(),
                     caller: ctx.accounts.commission_program.to_account_info()
-                }
+                },
+                &[&[b"market_auth", &[*auth_bump]]]
             ),
             seller_index
         )?;
