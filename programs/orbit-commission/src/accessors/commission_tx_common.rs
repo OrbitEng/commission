@@ -53,15 +53,18 @@ pub struct CloseTransactionAccount<'info>{
     pub commission_transaction: Account<'info, CommissionTransaction>,
 
     #[account(
+        has_one = wallet,
         constraint = 
-            (transactions_log.key() == commission_transaction.metadata.buyer) ||
-            (transactions_log.key() == commission_transaction.metadata.seller),
-        constraint = transactions_log.try_borrow_data()?[8..40] == wallet.key().to_bytes()
+        (proposer_account.voter_id == commission_transaction.metadata.seller) ||
+        (proposer_account.voter_id == commission_transaction.metadata.buyer)
     )]
-    /// CHECK: basic checks
-    pub transactions_log: AccountInfo<'info>,
-
+    pub proposer_account: Account<'info, OrbitMarketAccount>,
     pub wallet: Signer<'info>,
+
+    #[account(
+        constraint = buyer_account.voter_id == commission_transaction.metadata.buyer
+    )]
+    pub buyer_account: Account<'info, OrbitMarketAccount>,
 
     #[account(
         mut
@@ -95,17 +98,15 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, '
         }else{
             ctx.accounts.commission_transaction.metadata.rate = 95
         }
-        ctx.accounts.commission_transaction.metadata.buyer = ctx.accounts.buyer_transactions_log.key();
-        ctx.accounts.commission_transaction.metadata.seller = ctx.accounts.seller_transactions_log.key();
-        ctx.accounts.commission_transaction.metadata.product = ctx.accounts.commission_product.key();
+        ctx.accounts.commission_transaction.metadata.buyer = ctx.accounts.buyer_market_account.voter_id;
+        ctx.accounts.commission_transaction.metadata.seller = ctx.accounts.seller_market_account.voter_id;
+        ctx.accounts.commission_transaction.metadata.product = ctx.accounts.commission_product.metadata.index;
         ctx.accounts.commission_transaction.metadata.transaction_state = TransactionState::Opened;
         ctx.accounts.commission_transaction.metadata.transaction_price = price;
         ctx.accounts.commission_transaction.metadata.funded = false;
         ctx.accounts.commission_transaction.metadata.currency = System::id();
 
         ctx.accounts.commission_transaction.num_keys = 0;
-
-        ctx.accounts.commission_transaction.metadata.escrow_account = ctx.accounts.escrow_account.key();
         ctx.accounts.commission_transaction.final_decision = BuyerDecisionState::Null;
 
         ctx.accounts.commission_transaction.metadata.reviews = TransactionReviews{
@@ -113,26 +114,25 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, '
             seller: false
         };
 
-        orbit_transaction::cpi::add_to_buyer_transactions_log(
+        orbit_transaction::cpi::add_buyer_commissions_transaction(
             CpiContext::new_with_signer(
                 ctx.accounts.transaction_program.to_account_info(),
-                orbit_transaction::cpi::accounts::AddBuyerTransactions{
+                orbit_transaction::cpi::accounts::AddBuyerCommissionsTransactions{
+                    buyer_account: ctx.accounts.buyer_market_account.to_account_info(),
+                    wallet: ctx.accounts.buyer_wallet.to_account_info(),
                     transactions_log: ctx.accounts.buyer_transactions_log.to_account_info(),
-                    tx: ctx.accounts.commission_transaction.to_account_info(),
-                    buyer_wallet: ctx.accounts.buyer_wallet.to_account_info()
+                    tx: ctx.accounts.commission_transaction.to_account_info()
                 },
                 &[&[b"market_authority", &[*auth_bump]]]
             ),
             buyer_index
         )?;
-        orbit_transaction::cpi::add_to_seller_transactions_log(
+        orbit_transaction::cpi::add_seller_commissions_transaction(
             CpiContext::new(
                 ctx.accounts.transaction_program.to_account_info(),
-                orbit_transaction::cpi::accounts::AddSellerTransactions{
+                orbit_transaction::cpi::accounts::AddSellerCommissionsTransactions{
                     transactions_log: ctx.accounts.seller_transactions_log.to_account_info(),
-                    tx: ctx.accounts.commission_transaction.to_account_info(),
-                    caller_auth: ctx.accounts.commission_auth.to_account_info(),
-                    caller: ctx.accounts.commission_program.to_account_info()
+                    tx: ctx.accounts.commission_transaction.to_account_info()
                 }
             ),
             seller_index
@@ -166,17 +166,15 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, '
         }else{
             ctx.accounts.commission_transaction.metadata.rate = 95
         }
-        ctx.accounts.commission_transaction.metadata.buyer = ctx.accounts.buyer_transactions_log.key();
-        ctx.accounts.commission_transaction.metadata.seller = ctx.accounts.seller_transactions_log.key();
-        ctx.accounts.commission_transaction.metadata.product = ctx.accounts.commission_product.key();
+        ctx.accounts.commission_transaction.metadata.buyer = ctx.accounts.buyer_market_account.voter_id;
+        ctx.accounts.commission_transaction.metadata.seller = ctx.accounts.seller_market_account.voter_id;
+        ctx.accounts.commission_transaction.metadata.product = ctx.accounts.commission_product.metadata.index;
         ctx.accounts.commission_transaction.metadata.transaction_state = TransactionState::Opened;
         ctx.accounts.commission_transaction.metadata.transaction_price = price;
         ctx.accounts.commission_transaction.metadata.funded = false;
         ctx.accounts.commission_transaction.metadata.currency = ctx.accounts.token_mint.key();
         
         ctx.accounts.commission_transaction.num_keys = 0;
-
-        ctx.accounts.commission_transaction.metadata.escrow_account = ctx.accounts.escrow_account.key();
         ctx.accounts.commission_transaction.final_decision = BuyerDecisionState::Null;
 
         ctx.accounts.commission_transaction.metadata.reviews = TransactionReviews{
@@ -184,27 +182,26 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, '
             seller: false
         };
 
-        orbit_transaction::cpi::add_to_buyer_transactions_log(
-            CpiContext::new(
+        orbit_transaction::cpi::add_buyer_commissions_transaction(
+            CpiContext::new_with_signer(
                 ctx.accounts.transaction_program.to_account_info(),
-                orbit_transaction::cpi::accounts::AddBuyerTransactions{
+                orbit_transaction::cpi::accounts::AddBuyerCommissionsTransactions{
+                    buyer_account: ctx.accounts.buyer_market_account.to_account_info(),
+                    wallet: ctx.accounts.buyer_wallet.to_account_info(),
                     transactions_log: ctx.accounts.buyer_transactions_log.to_account_info(),
-                    tx: ctx.accounts.commission_transaction.to_account_info(),
-                    buyer_wallet: ctx.accounts.buyer_wallet.to_account_info()
-                }
+                    tx: ctx.accounts.commission_transaction.to_account_info()
+                },
+                &[&[b"market_authority", &[*auth_bump]]]
             ),
             buyer_index
         )?;
-        orbit_transaction::cpi::add_to_seller_transactions_log(
-            CpiContext::new_with_signer(
+        orbit_transaction::cpi::add_seller_commissions_transaction(
+            CpiContext::new(
                 ctx.accounts.transaction_program.to_account_info(),
-                orbit_transaction::cpi::accounts::AddSellerTransactions{
+                orbit_transaction::cpi::accounts::AddSellerCommissionsTransactions{
                     transactions_log: ctx.accounts.seller_transactions_log.to_account_info(),
-                    tx: ctx.accounts.commission_transaction.to_account_info(),
-                    caller_auth: ctx.accounts.commission_auth.to_account_info(),
-                    caller: ctx.accounts.commission_program.to_account_info()
-                },
-                &[&[b"market_authority", &[*auth_bump]]]
+                    tx: ctx.accounts.commission_transaction.to_account_info()
+                }
             ),
             seller_index
         )?;
@@ -212,6 +209,11 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, '
     }
 
     fn close_sol(ctx: Context<'_, '_, '_, 'c, CloseCommissionTransactionSol<'c>>) -> Result<()>{
+        let comm_tx = ctx.accounts.commission_transaction.key();
+        let comm_seed = comm_tx.as_ref();
+        let buyer_log = ctx.accounts.buyer_transactions_log.key();
+        let buyer_tx_log_seed = buyer_log.as_ref();
+
         if let Some(escrow_bump) = ctx.bumps.get("escrow_account"){
             if (ctx.accounts.commission_transaction.close_rate == 95)
                 && (ctx.accounts.commission_transaction.final_decision == BuyerDecisionState::Accept){
@@ -225,7 +227,7 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, '
                         orbit_transaction::close_escrow_sol_flat!(
                             ctx.accounts.escrow_account.to_account_info(),
                             ctx.accounts.buyer_wallet.to_account_info(),
-                            &[&[b"orbit_escrow_account", ctx.accounts.commission_transaction.key().as_ref(), &[*escrow_bump]]],
+                            &[&[b"orbit_escrow_account", comm_seed, buyer_tx_log_seed, &[*escrow_bump]]],
                             reflink_amt
                         ).expect("couldnt close escrow");
                         match orbit_transaction::remaining_accounts_to_wallet!(ctx.remaining_accounts){
@@ -233,7 +235,7 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, '
                                 orbit_transaction::close_escrow_sol_flat!(
                                     ctx.accounts.escrow_account.to_account_info(),
                                     reflink_wallet.to_account_info(),
-                                    &[&[b"orbit_escrow_account", ctx.accounts.commission_transaction.key().as_ref(), &[*escrow_bump]]],
+                                    &[&[b"orbit_escrow_account", comm_seed, buyer_tx_log_seed, &[*escrow_bump]]],
                                     reflink_amt
                                 ).expect("couldnt close escrow");
                                 reflink_wallet.exit(ctx.program_id)?;
@@ -244,7 +246,7 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, '
                     orbit_transaction::close_escrow_sol_flat!(
                         ctx.accounts.escrow_account.to_account_info(),
                         ctx.accounts.multisig_wallet.to_account_info(),
-                        &[&[b"orbit_escrow_account", ctx.accounts.commission_transaction.key().as_ref(), &[*escrow_bump]]],
+                        &[&[b"orbit_escrow_account", comm_seed, buyer_tx_log_seed, &[*escrow_bump]]],
                         residual_amt
                     ).expect("couldnt close escrow");
                 }
@@ -252,13 +254,13 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, '
                 orbit_transaction::close_escrow_sol_rate!(
                     ctx.accounts.escrow_account.to_account_info(),
                     ctx.accounts.seller_wallet.to_account_info(),
-                    &[&[b"orbit_escrow_account", ctx.accounts.commission_transaction.key().as_ref(), &[*escrow_bump]]],
+                    &[&[b"orbit_escrow_account", comm_seed, buyer_tx_log_seed, &[*escrow_bump]]],
                     ctx.accounts.commission_transaction.close_rate
                 ).expect("could not transfer tokens");
                 orbit_transaction::close_escrow_sol_rate!(
                     ctx.accounts.escrow_account.to_account_info(),
                     ctx.accounts.buyer_wallet.to_account_info(),
-                    &[&[b"orbit_escrow_account", ctx.accounts.commission_transaction.key().as_ref(), &[*escrow_bump]]],
+                    &[&[b"orbit_escrow_account", comm_seed, buyer_tx_log_seed, &[*escrow_bump]]],
                     100
                 ).expect("could not transfer tokens");
             
@@ -280,10 +282,10 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, '
             return err!(CommissionMarketErrors::InvalidAuthBump)
         }?;
 
-        orbit_transaction::cpi::clear_from_seller_transactions_log(
+        orbit_transaction::cpi::clear_seller_commissions_transaction(
             CpiContext::new(
                 ctx.accounts.transaction_program.to_account_info(),
-                orbit_transaction::cpi::accounts::ClearSellerTransactions{
+                orbit_transaction::cpi::accounts::ClearSellerCommissionsTransactions{
                     transactions_log: ctx.accounts.seller_transactions_log.to_account_info(),
                     caller_auth: ctx.accounts.commission_auth.to_account_info(),
                     caller: ctx.accounts.commission_program.to_account_info()
@@ -292,10 +294,10 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, '
             ctx.accounts.commission_transaction.metadata.seller_tx_index
         )?;
 
-        orbit_transaction::cpi::clear_from_buyer_transactions_log(
+        orbit_transaction::cpi::clear_buyer_commissions_transaction(
             CpiContext::new(
                 ctx.accounts.transaction_program.to_account_info(),
-                orbit_transaction::cpi::accounts::ClearBuyerTransactions{
+                orbit_transaction::cpi::accounts::ClearBuyerCommissionsTransactions{
                     transactions_log: ctx.accounts.buyer_transactions_log.to_account_info(),
                     caller_auth: ctx.accounts.commission_auth.to_account_info(),
                     caller: ctx.accounts.commission_program.to_account_info()
@@ -384,10 +386,10 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, '
             return err!(CommissionMarketErrors::InvalidAuthBump)
         }?;
 
-        orbit_transaction::cpi::clear_from_seller_transactions_log(
+        orbit_transaction::cpi::clear_seller_commissions_transaction(
             CpiContext::new(
                 ctx.accounts.transaction_program.to_account_info(),
-                orbit_transaction::cpi::accounts::ClearSellerTransactions{
+                orbit_transaction::cpi::accounts::ClearSellerCommissionsTransactions{
                     transactions_log: ctx.accounts.seller_transactions_log.to_account_info(),
                     caller_auth: ctx.accounts.commission_auth.to_account_info(),
                     caller: ctx.accounts.commission_program.to_account_info()
@@ -396,10 +398,10 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, '
             ctx.accounts.commission_transaction.metadata.seller_tx_index
         )?;
 
-        orbit_transaction::cpi::clear_from_buyer_transactions_log(
+        orbit_transaction::cpi::clear_buyer_commissions_transaction(
             CpiContext::new(
                 ctx.accounts.transaction_program.to_account_info(),
-                orbit_transaction::cpi::accounts::ClearBuyerTransactions{
+                orbit_transaction::cpi::accounts::ClearBuyerCommissionsTransactions{
                     transactions_log: ctx.accounts.buyer_transactions_log.to_account_info(),
                     caller_auth: ctx.accounts.commission_auth.to_account_info(),
                     caller: ctx.accounts.commission_program.to_account_info()
@@ -465,17 +467,22 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, '
             )?;
         };
 
+        let comm_tx = ctx.accounts.commission_transaction.key();
+        let comm_seed = comm_tx.as_ref();
+        let buyer_log = ctx.accounts.buyer_transactions_log.key();
+        let buyer_tx_log_seed = buyer_log.as_ref();
+
         if let Some(escrow_bump) = ctx.bumps.get("escrow_account"){
             orbit_transaction::close_escrow_sol_rate!(
                 ctx.accounts.escrow_account.to_account_info(),
                 ctx.accounts.seller_wallet.to_account_info(),
-                &[&[b"orbit_escrow_account", ctx.accounts.commission_transaction.key().as_ref(), &[*escrow_bump]]],
+                &[&[b"orbit_escrow_account", comm_seed, buyer_tx_log_seed, &[*escrow_bump]]],
                 ctx.accounts.commission_transaction.close_rate
             ).expect("could not transfer tokens");
             orbit_transaction::close_escrow_sol_rate!(
                 ctx.accounts.escrow_account.to_account_info(),
                 ctx.accounts.buyer_wallet.to_account_info(),
-                &[&[b"orbit_escrow_account", ctx.accounts.commission_transaction.key().as_ref(), &[*escrow_bump]]],
+                &[&[b"orbit_escrow_account", comm_seed, buyer_tx_log_seed, &[*escrow_bump]]],
                 100
             ).expect("could not transfer tokens");
         }else{
@@ -486,17 +493,17 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, '
             orbit_transaction::close_escrow_sol_rate!(
                 ctx.accounts.escrow_account.to_account_info(),
                 ctx.accounts.buyer_wallet.to_account_info(),
-                &[&[b"orbit_escrow_account", ctx.accounts.commission_transaction.key().as_ref(), &[*escrow_seeds]]],
+                &[&[b"orbit_escrow_account", comm_seed, buyer_tx_log_seed, &[*escrow_seeds]]],
                 100
             )?;
         }else{
             return err!(CommissionMarketErrors::InvalidEscrowBump)
         };
         
-        orbit_transaction::cpi::clear_from_seller_transactions_log(
+        orbit_transaction::cpi::clear_seller_commissions_transaction(
             CpiContext::new(
                 ctx.accounts.transaction_program.to_account_info(),
-                orbit_transaction::cpi::accounts::ClearSellerTransactions{
+                orbit_transaction::cpi::accounts::ClearSellerCommissionsTransactions{
                     transactions_log: ctx.accounts.seller_transactions_log.to_account_info(),
                     caller_auth: ctx.accounts.commission_auth.to_account_info(),
                     caller: ctx.accounts.commission_program.to_account_info()
@@ -505,10 +512,10 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, '
             ctx.accounts.commission_transaction.metadata.seller_tx_index
         )?;
 
-        orbit_transaction::cpi::clear_from_buyer_transactions_log(
+        orbit_transaction::cpi::clear_buyer_commissions_transaction(
             CpiContext::new(
                 ctx.accounts.transaction_program.to_account_info(),
-                orbit_transaction::cpi::accounts::ClearBuyerTransactions{
+                orbit_transaction::cpi::accounts::ClearBuyerCommissionsTransactions{
                     transactions_log: ctx.accounts.buyer_transactions_log.to_account_info(),
                     caller_auth: ctx.accounts.commission_auth.to_account_info(),
                     caller: ctx.accounts.commission_program.to_account_info()
@@ -558,10 +565,10 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, '
             return err!(CommissionMarketErrors::InvalidAuthBump)
         }; 
         
-        orbit_transaction::cpi::clear_from_seller_transactions_log(
+        orbit_transaction::cpi::clear_seller_commissions_transaction(
             CpiContext::new(
                 ctx.accounts.transaction_program.to_account_info(),
-                orbit_transaction::cpi::accounts::ClearSellerTransactions{
+                orbit_transaction::cpi::accounts::ClearSellerCommissionsTransactions{
                     transactions_log: ctx.accounts.seller_transactions_log.to_account_info(),
                     caller_auth: ctx.accounts.commission_auth.to_account_info(),
                     caller: ctx.accounts.commission_program.to_account_info()
@@ -570,10 +577,10 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, '
             ctx.accounts.commission_transaction.metadata.seller_tx_index
         )?;
 
-        orbit_transaction::cpi::clear_from_buyer_transactions_log(
+        orbit_transaction::cpi::clear_buyer_commissions_transaction(
             CpiContext::new(
                 ctx.accounts.transaction_program.to_account_info(),
-                orbit_transaction::cpi::accounts::ClearBuyerTransactions{
+                orbit_transaction::cpi::accounts::ClearBuyerCommissionsTransactions{
                     transactions_log: ctx.accounts.buyer_transactions_log.to_account_info(),
                     caller_auth: ctx.accounts.commission_auth.to_account_info(),
                     caller: ctx.accounts.commission_program.to_account_info()
@@ -600,8 +607,18 @@ pub struct BuyerConfirmation<'info>{
     pub commission_transaction: Box<Account<'info, CommissionTransaction>>,
 
     #[account(
-        address = commission_transaction.metadata.buyer,
-        has_one = buyer_wallet
+        constraint = buyer_market_account.voter_id == commission_transaction.metadata.buyer
+    )]
+    pub buyer_market_account: Account<'info, OrbitMarketAccount>,
+
+    #[account(
+        seeds = [
+            b"buyer_transactions",
+            (&(orbit_transaction::TransactionType::Commissions).try_to_vec()?).as_slice(),
+            &buyer_market_account.voter_id.to_le_bytes()
+        ], 
+        bump,
+        seeds::program = &orbit_transaction::id()
     )]
     pub buyer_transactions: Box<Account<'info, BuyerOpenTransactions>>,
 
@@ -641,8 +658,13 @@ pub struct BuyerDeny<'info>{
     pub buyer_account: Account<'info, OrbitMarketAccount>,
 
     #[account(
-        address = commission_transaction.metadata.buyer,
-        has_one = buyer_wallet
+        seeds = [
+            b"buyer_transactions",
+            (&(orbit_transaction::TransactionType::Commissions).try_to_vec()?).as_slice(),
+            &buyer_account.voter_id.to_le_bytes()
+        ], 
+        bump,
+        seeds::program = &orbit_transaction::id()
     )]
     pub buyer_transactions: Box<Account<'info, BuyerOpenTransactions>>,
 
@@ -698,12 +720,24 @@ pub struct SellerAcceptTransaction<'info>{
     pub commission_transaction: Box<Account<'info, CommissionTransaction>>,
 
     #[account(
-        address = commission_transaction.metadata.seller,
+        constraint = seller_market_account.voter_id == commission_transaction.metadata.seller
+    )]
+    pub seller_market_account: Account<'info, OrbitMarketAccount>,
+
+    #[account(
+        mut,
+        seeds = [
+            b"seller_transactions",
+            (&(orbit_transaction::TransactionType::Commissions).try_to_vec()?).as_slice(),
+            &seller_market_account.voter_id.to_le_bytes()
+        ], 
+        bump,
+        seeds::program = &orbit_transaction::id()
     )]
     pub seller_transactions: Box<Account<'info, SellerOpenTransactions>>,
 
     #[account(
-        address = seller_transactions.seller_wallet
+        address = seller_market_account.wallet
     )]
     pub wallet: Signer<'info>
 }
@@ -722,11 +756,25 @@ pub struct CommitInitData<'info>{
     pub commission_transaction: Box<Account<'info, CommissionTransaction>>,
 
     #[account(
-        address = commission_transaction.metadata.seller,
-        has_one = seller_wallet
+        constraint = seller_market_account.voter_id == commission_transaction.metadata.seller
+    )]
+    pub seller_market_account: Account<'info, OrbitMarketAccount>,
+
+    #[account(
+        mut,
+        seeds = [
+            b"seller_transactions",
+            (&(orbit_transaction::TransactionType::Commissions).try_to_vec()?).as_slice(),
+            &seller_market_account.voter_id.to_le_bytes()
+        ], 
+        bump,
+        seeds::program = &orbit_transaction::id()
     )]
     pub seller_transactions: Box<Account<'info, SellerOpenTransactions>>,
 
+    #[account(
+        address = seller_market_account.wallet
+    )]
     pub seller_wallet: Signer<'info>,
 }
 
@@ -759,11 +807,25 @@ pub struct CommitSubKeys<'info>{
     pub commission_transaction: Box<Account<'info, CommissionTransaction>>,
 
     #[account(
-        address = commission_transaction.metadata.seller,
-        has_one = seller_wallet
+        constraint = seller_market_account.voter_id == commission_transaction.metadata.seller
+    )]
+    pub seller_market_account: Account<'info, OrbitMarketAccount>,
+
+    #[account(
+        mut,
+        seeds = [
+            b"seller_transactions",
+            (&(orbit_transaction::TransactionType::Commissions).try_to_vec()?).as_slice(),
+            &seller_market_account.voter_id.to_le_bytes()
+        ], 
+        bump,
+        seeds::program = &orbit_transaction::id()
     )]
     pub seller_transactions: Box<Account<'info, SellerOpenTransactions>>,
 
+    #[account(
+        address = seller_market_account.wallet
+    )]
     pub seller_wallet: Signer<'info>,
 }
 
@@ -811,15 +873,15 @@ pub struct LeaveReview<'info>{
     #[account(
         mut,
         constraint = 
-        (reviewer.seller_physical_transactions == commission_transaction.metadata.seller) ||
-        (reviewer.buyer_physical_transactions == commission_transaction.metadata.buyer)
+        (reviewer.voter_id == commission_transaction.metadata.seller) ||
+        (reviewer.voter_id == commission_transaction.metadata.buyer)
     )]
     pub reviewed_account: Box<Account<'info, OrbitMarketAccount>>,
 
     #[account(
         constraint = 
-        (reviewer.seller_physical_transactions == commission_transaction.metadata.seller) ||
-        (reviewer.buyer_physical_transactions == commission_transaction.metadata.buyer),
+        (reviewer.voter_id == commission_transaction.metadata.seller) ||
+        (reviewer.voter_id == commission_transaction.metadata.buyer),
         seeds = [
             b"orbit_account",
             wallet.key().as_ref()
@@ -856,7 +918,7 @@ impl <'a> OrbitMarketAccountTrait<'a, LeaveReview<'a>> for CommissionTransaction
             return err!(ReviewErrors::RatingOutsideRange)
         };
 
-        if ctx.accounts.commission_transaction.metadata.seller == ctx.accounts.reviewer.key() && !ctx.accounts.commission_transaction.metadata.reviews.seller{
+        if ctx.accounts.commission_transaction.metadata.seller == ctx.accounts.reviewer.voter_id && !ctx.accounts.commission_transaction.metadata.reviews.seller{
             if let Some(auth_bump) = ctx.bumps.get("commission_auth"){
                 orbit_transaction::submit_rating_with_signer!(
                     ctx.accounts.accounts_program.to_account_info(),
@@ -871,7 +933,7 @@ impl <'a> OrbitMarketAccountTrait<'a, LeaveReview<'a>> for CommissionTransaction
                 return err!(MarketAccountErrors::CannotCallOrbitAccountsProgram)
             };
         }else
-        if ctx.accounts.commission_transaction.metadata.buyer == ctx.accounts.reviewer.key() && !ctx.accounts.commission_transaction.metadata.reviews.buyer{
+        if ctx.accounts.commission_transaction.metadata.buyer == ctx.accounts.reviewer.voter_id && !ctx.accounts.commission_transaction.metadata.reviews.buyer{
             if let Some(auth_bump) = ctx.bumps.get("commission_auth"){
                 orbit_transaction::submit_rating_with_signer!(
                     ctx.accounts.accounts_program.to_account_info(),
@@ -909,11 +971,24 @@ pub struct CommitPreview<'info>{
     pub commission_transaction: Box<Account<'info, CommissionTransaction>>,
 
     #[account(
-        address = commission_transaction.metadata.seller,
-        has_one = seller_wallet
+        constraint = seller_market_account.voter_id == commission_transaction.metadata.seller
+    )]
+    pub seller_market_account: Account<'info, OrbitMarketAccount>,
+
+    #[account(
+        seeds = [
+            b"seller_transactions",
+            (&(orbit_transaction::TransactionType::Commissions).try_to_vec()?).as_slice(),
+            &seller_market_account.voter_id.to_le_bytes()
+        ], 
+        bump,
+        seeds::program = &orbit_transaction::id()
     )]
     pub seller_transactions: Box<Account<'info, SellerOpenTransactions>>,
 
+    #[account(
+        address = seller_market_account.wallet
+    )]
     pub seller_wallet: Signer<'info>,
 }
 
@@ -933,23 +1008,24 @@ pub struct UpdateRate<'info>{
     pub commission_transaction: Box<Account<'info, CommissionTransaction>>,
 
     #[account(
-        constraint = (transaction_logs.key() == commission_transaction.metadata.seller) || (transaction_logs.key() == commission_transaction.metadata.buyer),
-        constraint = transaction_logs.try_borrow_data()?[8..40] == wallet.key().to_bytes()
+        has_one = wallet,
+        constraint = 
+        (proposer_account.voter_id == commission_transaction.metadata.seller) ||
+        (proposer_account.voter_id == commission_transaction.metadata.buyer)
     )]
-    /// CHECK: base checks done
-    pub transaction_logs: AccountInfo<'info>,
+    pub proposer_account: Account<'info, OrbitMarketAccount>,
 
     pub wallet: Signer<'info>,
 }
 
 pub fn propose_rate_handler(ctx: Context<UpdateRate>, new_rate: u8) -> Result<()>{
     ctx.accounts.commission_transaction.preview_rate = new_rate;
-    ctx.accounts.commission_transaction.last_rate_offerer = ctx.accounts.transaction_logs.key();
+    ctx.accounts.commission_transaction.last_rate_offerer = ctx.accounts.proposer_account.voter_id;
     Ok(())
 }
 
 pub fn accept_rate_handler(ctx: Context<UpdateRate>) -> Result<()>{
-    if ctx.accounts.transaction_logs.key() == ctx.accounts.commission_transaction.last_rate_offerer{
+    if ctx.accounts.proposer_account.voter_id == ctx.accounts.commission_transaction.last_rate_offerer{
         return err!(CommissionMarketErrors::InvalidRateAcceptor)
     };
     ctx.accounts.commission_transaction.last_rate_offerer = ctx.accounts.commission_transaction.metadata.seller;

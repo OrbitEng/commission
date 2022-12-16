@@ -3,7 +3,7 @@ use market_accounts::{
     OrbitMarketAccount,
     program::OrbitMarketAccounts
 };
-use orbit_product::{ListingsStruct, program::OrbitProduct};
+use orbit_product::program::OrbitProduct;
 use orbit_product::CommissionProduct;
 use crate::{
     CommissionTransaction,
@@ -19,7 +19,7 @@ pub struct OpenCommissionTransactionSol<'info>{
     #[account(
         init,
         payer = buyer_wallet,
-        space = 4000,
+        space = 2400,
         seeds = [
             b"orbit_commission_transaction",
             seller_transactions_log.key().as_ref(),
@@ -40,7 +40,8 @@ pub struct OpenCommissionTransactionSol<'info>{
     pub escrow_account: SystemAccount<'info>,
 
     #[account(
-        mut
+        mut,
+        constraint = commission_product.metadata.owner_catalog == seller_market_account.voter_id
     )] 
     pub commission_product: Box<Account<'info, CommissionProduct>>,
     
@@ -48,31 +49,43 @@ pub struct OpenCommissionTransactionSol<'info>{
     /// BUYER SELLER
     
     /// BUYER
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [
+            b"buyer_transactions",
+            (&(orbit_transaction::TransactionType::Commissions).try_to_vec()?).as_slice(),
+            &buyer_market_account.voter_id.to_le_bytes()
+        ], 
+        bump,
+        seeds::program = &orbit_transaction::id()
+    )]
     pub buyer_transactions_log: Box<Account<'info, BuyerOpenTransactions>>,
 
     #[account(
-        mut,
-        constraint = buyer_market_account.wallet == buyer_wallet.key(),
-        constraint = buyer_market_account.buyer_commission_transactions == buyer_transactions_log.key()
+        mut
     )]
     pub buyer_market_account: Box<Account<'info, OrbitMarketAccount>>,
 
     #[account(
         mut,
-        address = buyer_transactions_log.buyer_wallet
+        address = buyer_market_account.wallet
     )]
     pub buyer_wallet: Signer<'info>,
     
     /// SELLER
-    #[account(
-        address = commission_product.metadata.owner_catalog
-    )]
-    pub seller_listings: Box<Account<'info, ListingsStruct>>,
+
+    #[account(    )]
+    pub seller_market_account: Account<'info, OrbitMarketAccount>,
 
     #[account(
         mut,
-        constraint = seller_transactions_log.seller_wallet == seller_listings.listings_owner
+        seeds = [
+            b"seller_transactions",
+            (&(orbit_transaction::TransactionType::Commissions).try_to_vec()?).as_slice(),
+            &seller_market_account.voter_id.to_le_bytes()
+        ], 
+        bump,
+        seeds::program = &orbit_transaction::id()
     )]
     pub seller_transactions_log: Box<Account<'info, SellerOpenTransactions>>,
 
@@ -114,8 +127,7 @@ pub struct CloseCommissionTransactionSol<'info>{
             commission_transaction.key().as_ref(),
             buyer_transactions_log.key().as_ref()
         ],
-        bump,
-        address = commission_transaction.metadata.escrow_account
+        bump
     )]
     pub escrow_account: SystemAccount<'info>,
 
@@ -125,14 +137,19 @@ pub struct CloseCommissionTransactionSol<'info>{
     /// BUYER
     #[account(
         mut,
-        constraint = buyer_account.buyer_commission_transactions == buyer_transactions_log.key()
+        constraint = buyer_account.voter_id == commission_transaction.metadata.buyer
     )]
     pub buyer_account: Box<Account<'info, OrbitMarketAccount>>,
     
     #[account(
         mut,
-        address = commission_transaction.metadata.buyer,
-        has_one = buyer_wallet
+        seeds = [
+            b"buyer_transactions",
+            (&(orbit_transaction::TransactionType::Commissions).try_to_vec()?).as_slice(),
+            &buyer_account.voter_id.to_le_bytes()
+        ], 
+        bump,
+        seeds::program = &orbit_transaction::id()
     )]
     pub buyer_transactions_log: Box<Account<'info, BuyerOpenTransactions>>,
 
@@ -145,14 +162,19 @@ pub struct CloseCommissionTransactionSol<'info>{
     /// SELLER
     #[account(
         mut,
-        constraint = seller_account.seller_commission_transactions == seller_transactions_log.key()
+        constraint = seller_account.voter_id == commission_transaction.metadata.seller
     )]
     pub seller_account: Box<Account<'info, OrbitMarketAccount>>,
 
     #[account(
         mut,
-        address = commission_transaction.metadata.seller,
-        has_one = seller_wallet
+        seeds = [
+            b"seller_transactions",
+            (&(orbit_transaction::TransactionType::Commissions).try_to_vec()?).as_slice(),
+            &seller_account.voter_id.to_le_bytes()
+        ], 
+        bump,
+        seeds::program = &orbit_transaction::id()
     )]
     pub seller_transactions_log: Box<Account<'info, SellerOpenTransactions>>,
 
@@ -199,10 +221,10 @@ pub struct FundEscrowSol<'info>{
         mut,
         seeds = [
             b"orbit_escrow_account",
-            commission_transaction.key().as_ref()
+            commission_transaction.key().as_ref(),
+            buyer_transactions_log.key().as_ref()
         ],
-        bump,
-        address = commission_transaction.metadata.escrow_account
+        bump
     )]
     pub escrow_account: SystemAccount<'info>,
 
@@ -212,10 +234,22 @@ pub struct FundEscrowSol<'info>{
     /// BUYER
     #[account(
         mut,
-        address = commission_transaction.metadata.buyer,
-        has_one = buyer_wallet
+        seeds = [
+            b"buyer_transactions",
+            (&(orbit_transaction::TransactionType::Commissions).try_to_vec()?).as_slice(),
+            &buyer_market_account.voter_id.to_le_bytes()
+        ], 
+        bump,
+        seeds::program = &orbit_transaction::id()
     )]
     pub buyer_transactions_log: Box<Account<'info, BuyerOpenTransactions>>,
+
+    #[account(
+        mut,
+        constraint = buyer_market_account.voter_id == commission_transaction.metadata.buyer
+    )]
+    pub buyer_market_account: Box<Account<'info, OrbitMarketAccount>>,
+    
 
     #[account(mut)]
     pub buyer_wallet: Signer<'info>
@@ -235,10 +269,10 @@ pub struct SellerEarlyDeclineSol<'info>{
         mut,
         seeds = [
             b"orbit_escrow_account",
-            commission_transaction.key().as_ref()
+            commission_transaction.key().as_ref(),
+            buyer_transactions_log.key().as_ref()
         ],
-        bump,
-        address = commission_transaction.metadata.escrow_account
+        bump
     )]
     pub escrow_account: SystemAccount<'info>,
 
@@ -248,16 +282,23 @@ pub struct SellerEarlyDeclineSol<'info>{
     /// BUYER
     #[account(
         mut,
-        constraint = buyer_account.buyer_commission_transactions == buyer_transactions_log.key()
+        constraint = buyer_account.voter_id == commission_transaction.metadata.buyer
     )]
     pub buyer_account: Box<Account<'info, OrbitMarketAccount>>,
     
+    /// BUYER
     #[account(
         mut,
-        address = commission_transaction.metadata.buyer,
-        has_one = buyer_wallet
+        seeds = [
+            b"buyer_transactions",
+            (&(orbit_transaction::TransactionType::Commissions).try_to_vec()?).as_slice(),
+            &buyer_account.voter_id.to_le_bytes()
+        ], 
+        bump,
+        seeds::program = &orbit_transaction::id()
     )]
     pub buyer_transactions_log: Box<Account<'info, BuyerOpenTransactions>>,
+    
 
     #[account(
         mut,
@@ -266,11 +307,21 @@ pub struct SellerEarlyDeclineSol<'info>{
     pub buyer_wallet: SystemAccount<'info>,
     
     /// SELLER
-
     #[account(
         mut,
-        address = commission_transaction.metadata.seller,
-        has_one = seller_wallet
+        constraint = seller_account.voter_id == commission_transaction.metadata.seller
+    )]
+    pub seller_account: Box<Account<'info, OrbitMarketAccount>>,
+    
+    #[account(
+        mut,
+        seeds = [
+            b"seller_transactions",
+            (&(orbit_transaction::TransactionType::Commissions).try_to_vec()?).as_slice(),
+            &seller_account.voter_id.to_le_bytes()
+        ], 
+        bump,
+        seeds::program = &orbit_transaction::id()
     )]
     pub seller_transactions_log: Box<Account<'info, SellerOpenTransactions>>,
 
