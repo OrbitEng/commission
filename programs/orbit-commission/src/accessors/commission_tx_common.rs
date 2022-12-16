@@ -59,6 +59,7 @@ pub struct CloseTransactionAccount<'info>{
         (proposer_account.voter_id == commission_transaction.metadata.buyer)
     )]
     pub proposer_account: Account<'info, OrbitMarketAccount>,
+    
     pub wallet: Signer<'info>,
 
     #[account(

@@ -251,7 +251,10 @@ pub struct FundEscrowSol<'info>{
     pub buyer_market_account: Box<Account<'info, OrbitMarketAccount>>,
     
 
-    #[account(mut)]
+    #[account(
+        mut,
+        address = buyer_market_account.wallet
+    )]
     pub buyer_wallet: Signer<'info>
 }
 
@@ -325,7 +328,10 @@ pub struct SellerEarlyDeclineSol<'info>{
     )]
     pub seller_transactions_log: Box<Account<'info, SellerOpenTransactions>>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        address = seller_account.wallet
+    )]
     pub seller_wallet: Signer<'info>,
 
     //////////////////////////////////
