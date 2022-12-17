@@ -122,6 +122,13 @@ pub struct CloseCommissionTransactionSol<'info>{
 
     #[account(
         mut,
+        constraint = commission_product.metadata.index == commission_transaction.metadata.product,
+        constraint = commission_product.metadata.owner_catalog == seller_account.voter_id
+    )] 
+    pub commission_product: Box<Account<'info, CommissionProduct>>,
+
+    #[account(
+        mut,
         seeds = [
             b"orbit_escrow_account",
             commission_transaction.key().as_ref(),
@@ -203,7 +210,9 @@ pub struct CloseCommissionTransactionSol<'info>{
     
     pub market_account_program: Program<'info, OrbitMarketAccounts>,
 
-    pub transaction_program: Program<'info, OrbitTransaction>
+    pub transaction_program: Program<'info, OrbitTransaction>,
+    
+    pub product_program: Program<'info, OrbitProduct>,
 }
 
 #[derive(Accounts)]

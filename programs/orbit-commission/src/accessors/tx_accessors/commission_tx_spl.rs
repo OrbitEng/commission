@@ -137,6 +137,13 @@ pub struct CloseCommissionTransactionSpl<'info>{
     
     #[account(
         mut,
+        constraint = commission_product.metadata.index == commission_transaction.metadata.product,
+        constraint = commission_product.metadata.owner_catalog == seller_account.voter_id
+    )] 
+    pub commission_product: Box<Account<'info, CommissionProduct>>,
+    
+    #[account(
+        mut,
         seeds = [
             b"orbit_escrow_account",
             commission_transaction.key().as_ref(),
@@ -221,6 +228,8 @@ pub struct CloseCommissionTransactionSpl<'info>{
     pub transaction_program: Program<'info, OrbitTransaction>,
 
     pub token_program: Program<'info, Token>,
+    
+    pub product_program: Program<'info, OrbitProduct>,
     
 }
 

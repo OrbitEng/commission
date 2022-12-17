@@ -278,7 +278,18 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, '
                 ctx.accounts.commission_auth.to_account_info(),
                 ctx.accounts.commission_program.to_account_info(),
                 &[&[b"market_authority", &[*auth_bump]]]
-            )
+            )?;
+            orbit_product::cpi::commission_increment_times_sold(
+                CpiContext::new_with_signer(
+                    ctx.accounts.product_program.to_account_info(),
+                    orbit_product::cpi::accounts::UpdateCommissionQuantityInternal{
+                        product: ctx.accounts.commission_product.to_account_info(),
+                        caller_auth: ctx.accounts.commission_auth.to_account_info(),
+                        caller: ctx.accounts.commission_program.to_account_info()
+                    },
+                    &[&[b"market_authority", &[*auth_bump]]]
+                )
+            )?;
         }else{
             return err!(CommissionMarketErrors::InvalidAuthBump)
         }?;
@@ -374,6 +385,17 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, '
                     &[&[b"market_authority", &[*auth_bump]]],
                     ctx.accounts.commission_transaction.metadata.transaction_price,
                     100
+                )?;
+                orbit_product::cpi::commission_increment_times_sold(
+                    CpiContext::new_with_signer(
+                        ctx.accounts.product_program.to_account_info(),
+                        orbit_product::cpi::accounts::IncrementCommissionSoldInternal{
+                            product: ctx.accounts.phys_product.to_account_info(),
+                            caller_auth: ctx.accounts.commission_auth.to_account_info(),
+                            caller: ctx.accounts.commission_program.to_account_info()
+                        },
+                        &[&[b"market_authority", &[*auth_bump]]]
+                    )
                 )?;
                 orbit_transaction::post_tx_incrementing!(
                     ctx.accounts.market_account_program.to_account_info(),
