@@ -2,7 +2,7 @@
 seeds = false
 skip-lint = false
 [programs.devnet]
-orbit_commission = "9kTSzk3yQZBn2esehyucammd1WJ65GKcVAVCBGMdbcL5"
+orbit_commission = "EacoywQUDpySVU1uQe7noLunwo7oiDNfhyoWrvkqvbeA"
 
 [registry]
 url = "https://api.apr.dev"

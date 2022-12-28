@@ -292,7 +292,7 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, '
             )?;
         }else{
             return err!(CommissionMarketErrors::InvalidAuthBump)
-        }?;
+        };
 
         orbit_transaction::cpi::clear_seller_commissions_transaction(
             CpiContext::new(
@@ -389,8 +389,8 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, '
                 orbit_product::cpi::commission_increment_times_sold(
                     CpiContext::new_with_signer(
                         ctx.accounts.product_program.to_account_info(),
-                        orbit_product::cpi::accounts::IncrementCommissionSoldInternal{
-                            product: ctx.accounts.phys_product.to_account_info(),
+                        orbit_product::cpi::accounts::UpdateCommissionQuantityInternal{
+                            product: ctx.accounts.commission_product.to_account_info(),
                             caller_auth: ctx.accounts.commission_auth.to_account_info(),
                             caller: ctx.accounts.commission_program.to_account_info()
                         },
