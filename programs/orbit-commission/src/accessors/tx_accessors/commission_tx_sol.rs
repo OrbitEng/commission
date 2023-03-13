@@ -196,7 +196,7 @@ pub struct CloseCommissionTransactionSol<'info>{
     
     #[account(
         mut,
-        address = Pubkey::new(orbit_addresses::MULTISIG_SIGNER)
+        address = Pubkey::from(orbit_addresses::MULTISIG_SIGNER)
     )]
     pub multisig_wallet: SystemAccount<'info>,
 

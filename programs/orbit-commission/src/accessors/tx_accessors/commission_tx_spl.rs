@@ -217,7 +217,7 @@ pub struct CloseCommissionTransactionSpl<'info>{
     pub commission_auth: SystemAccount<'info>,
     
     #[account(
-        token::authority = Pubkey::new(orbit_addresses::MULTISIG_SIGNER)
+        token::authority = Pubkey::from(orbit_addresses::MULTISIG_SIGNER)
     )]
     pub multisig_ata: Account<'info, TokenAccount>,
 

@@ -220,7 +220,7 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, '
                 && (ctx.accounts.commission_transaction.final_decision == BuyerDecisionState::Accept){
                     let bal = ctx.accounts.escrow_account.lamports();
                     let mut residual_amt = bal * 5/100;
-                    if  (ctx.accounts.buyer_account.used_reflink != Pubkey::new(&[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])) &&
+                    if  (ctx.accounts.buyer_account.used_reflink != Pubkey::from([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])) &&
                         (ctx.remaining_accounts[0].key() == ctx.accounts.buyer_account.used_reflink)
                     {
                         let reflink_amt = bal * 25 / 10000;
@@ -328,7 +328,7 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> OrbitTransactionTrait<'a, 'b, 'c, 'd, '
                 && (ctx.accounts.commission_transaction.final_decision == BuyerDecisionState::Accept){
                     let bal = amount(&ctx.accounts.escrow_account.to_account_info()).expect("could not deserialize token account");
                     let mut residual_amt = bal * 5/100;
-                    if  (ctx.accounts.buyer_account.used_reflink != Pubkey::new(&[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])) &&
+                    if  (ctx.accounts.buyer_account.used_reflink != Pubkey::from([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])) &&
                         (ctx.remaining_accounts[0].key() == ctx.accounts.buyer_account.used_reflink)
                     {
                         let reflink_amt = bal * 25 / 10000;
