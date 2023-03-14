@@ -63,7 +63,7 @@ pub struct CloseTransactionAccount<'info>{
     pub wallet: Signer<'info>,
 
     #[account(
-        constraint = buyer_account.voter_id == commission_transaction.metadata.buyer
+        constraint = {buyer_account.voter_id == commission_transaction.metadata.buyer}
     )]
     pub buyer_account: Account<'info, OrbitMarketAccount>,
 

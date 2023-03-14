@@ -1251,8 +1251,5 @@
       "name": "InvalidReflink",
       "msg": "invalid reflink passed"
     }
-  ],
-  "metadata": {
-    "address": "EacoywQUDpySVU1uQe7noLunwo7oiDNfhyoWrvkqvbeA"
-  }
+  ]
 }
